@@ -3011,7 +3011,30 @@ class Diameter:
         templateLoader = jinja2.FileSystemLoader(searchpath="../")
         templateEnv = jinja2.Environment(loader=templateLoader)
         self.logTool.log(service='HSS', level='debug', message="Loading iFC from path " + str(ims_subscriber_details['ifc_path']), redisClient=self.redisMessaging)
-        template = templateEnv.get_template(ims_subscriber_details['ifc_path'])
+
+        try:
+            ifc_path = ims_subscriber_details['ifc_path']
+            if ifc_path is None:
+                ifc_path = self.config['hss']['Default_iFC']
+            template = templateEnv.get_template(ifc_path)
+        except Exception as E:
+            self.redisMessaging.sendMetric(serviceName='diameter', metricName='prom_diam_auth_event_count',
+                                            metricType='counter', metricAction='inc',
+                                            metricValue=1.0,
+                                            metricLabels={
+                                                        "diameter_application_id": 16777216,
+                                                        "diameter_cmd_code": 301,
+                                                        "event": "Generating Template failed",
+                                                        "imsi_prefix": str(username[0:6])},
+                                            metricHelp='Diameter Server Assignment related Counters',
+                                            metricExpiry=60,
+                                            usePrefix=True,
+                                            prefixHostname=self.hostname,
+                                            prefixServiceName='metric')
+            result_code = 2001                                                                                                  #Diameter UNABLE TO COMPLY
+            avp += self.generate_avp(268, 40, self.int_to_hex(result_code, 4))                                                  #Result Code
+            response = self.generate_diameter_packet("01", "40", 301, 16777216, packet_vars['hop-by-hop-identifier'], packet_vars['end-to-end-identifier'], avp)     #Generate Diameter packet
+            return response
         
         #These variables are passed to the template for use
         ims_subscriber_details['mnc'] = self.MNC.zfill(3)
