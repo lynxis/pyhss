@@ -25,6 +25,9 @@ import socket
 import traceback
 from pyhss_config import config
 
+class SQNResyncWrongMAC(ValueError):
+    """ The SQN Resync failed because the MAC of the UE (AUTS) doesn't match the calculated value """
+    pass
 
 Base = declarative_base()
 class APN(Base):
@@ -1608,7 +1611,7 @@ class Database:
             mac_s = binascii.hexlify(mac_s_bytes).decode("utf-8")
             if auts[6:] != mac_s:
                 self.logTool.log(service='Database', level='warn', message=f"AUC {auc_id}: SQN resync failed. AUTS doesn't match mac_s")
-                raise ValueError("SQN Resync failed!")
+                raise SQNResyncWrongMAC("SQN Resync failed with wrong MAC!")
 
             self.logTool.log(service='Database', level='debug', message="SQN from resync: " + str(sqn) + " SQN in DB is "  + str(key_data['sqn']) + "(Difference of " + str(int(sqn) - int(key_data['sqn'])) + ")", redisClient=self.redisMessaging)
             self.Update_AuC(auc_id, sqn=sqn+100)

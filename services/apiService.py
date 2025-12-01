@@ -1,5 +1,7 @@
 import sys
 import json
+from typing import Optional, List, Dict, Any
+
 from flask import Flask, request, jsonify, Response
 from flask_restx import Api, Resource, fields, reqparse, abort
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -300,6 +302,12 @@ def handle_exception(e):
         logTool.log(service='API', level='error', message=f"[API] Additional Error Information: {traceback.format_exc()}\n{sys.exc_info()[2]}", redisClient=redisMessaging)
         return response_json, 500
 
+def api_error(component: str, error_message: str, code: int = 500) -> tuple[dict, int]:
+    response_json = {}
+    response_json['reason'] = error_message
+    logTool.log(service='API', level='error', message=f"[API] [{component}]: {error_message}")
+    return response_json, code
+
 apiService.before_request(auth_before_request)
 
 @apiService.errorhandler(404)
@@ -498,7 +506,7 @@ class PyHSS_AUC_Get_EAP_AKA_Vectors(Resource):
             print(E)
             return handle_exception(E)
 
-@ns_auc.route('/aka/vector_count/<string:vector_count>/imsi/<string:imsi>')
+@ns_auc.route('/aka/vector_count/<int:vector_count>/imsi/<string:imsi>')
 class PyHSS_AUC_Get_AKA_Vectors(Resource):
     def get(self, imsi, vector_count):
         '''Get AKA vectors for specified IMSI and PLMN'''
@@ -508,6 +516,40 @@ class PyHSS_AUC_Get_AKA_Vectors(Resource):
             plmn = diameterClient.EncodePLMN(mcc=config['hss']['MCC'], mnc=config['hss']['MNC'])
             vector_dict = databaseClient.Get_Vectors_AuC(auc_data['auc_id'], action='aka', plmn=plmn, requested_vectors=int(vector_count))
             return vector_dict, 200
+        except Exception as E:
+            print(E)
+            return handle_exception(E)
+
+    def put(self, imsi, vector_count):
+        '''Get AKA vectors for specified IMSI and PLMN but do a AKA SQN resync first'''
+        try:
+            json_data = request.get_json(force=True)
+            # Require RAND, AUTS
+            for missing in ['rand', 'auts']:
+                if missing not in json_data:
+                    return api_error('AKA', f"json doesn't contain required field {missing}", 422)
+
+            rand = json_data['rand']
+            auts = json_data['auts']
+            # validate rand, must be a hexstring in form of ascii. E.g. 8 byte rand will be encoding into 16 char in ascii
+            if len(rand) % 2 != 0:
+                return api_error('AKA', "given rand length is uneven, but should be a hexstring.", 422)
+            if len(auts) % 2 != 0:
+                return api_error('AKA', "given auts length is uneven, but should be a hexstring.", 422)
+
+            auc_data = databaseClient.Get_AuC(imsi=imsi)
+            plmn = diameterClient.EncodePLMN(mcc=config['hss']['MCC'], mnc=config['hss']['MNC'])
+            databaseClient.Get_Vectors_AuC(auc_data['auc_id'], action='sqn_resync', plmn=plmn, rand=rand, auts=auts)
+
+            requested_vectors = int(vector_count)
+            vector_dict = {}
+            if requested_vectors > 0:
+                plmn = diameterClient.EncodePLMN(mcc=config['hss']['MCC'], mnc=config['hss']['MNC'])
+                vector_dict = databaseClient.Get_Vectors_AuC(auc_data['auc_id'], action='aka', plmn=plmn, requested_vectors=requested_vectors)
+            return vector_dict, 200
+
+        except database.SQNResyncWrongMAC as E:
+            return api_error('AKA', "SQN Resync failed with wrong MAC", 422)
         except Exception as E:
             print(E)
             return handle_exception(E)
