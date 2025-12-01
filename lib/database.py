@@ -1602,8 +1602,14 @@ class Database:
 
         elif action == "sqn_resync":
             self.logTool.log(service='Database', level='debug', message="Resync SQN", redisClient=self.redisMessaging)
-            rand = kwargs['rand']       
-            sqn, mac_s = S6a_crypt.generate_resync_s6a(key_data['ki'], key_data['opc'], key_data['amf'], kwargs['auts'], rand)
+            rand = kwargs['rand']
+            auts = kwargs['auts']
+            sqn, mac_s_bytes = S6a_crypt.generate_resync_s6a(key_data['ki'], key_data['opc'], key_data['amf'], auts, rand)
+            mac_s = binascii.hexlify(mac_s_bytes).decode("utf-8")
+            if auts[6:] != mac_s:
+                self.logTool.log(service='Database', level='warn', message=f"AUC {auc_id}: SQN resync failed. AUTS doesn't match mac_s")
+                raise ValueError("SQN Resync failed!")
+
             self.logTool.log(service='Database', level='debug', message="SQN from resync: " + str(sqn) + " SQN in DB is "  + str(key_data['sqn']) + "(Difference of " + str(int(sqn) - int(key_data['sqn'])) + ")", redisClient=self.redisMessaging)
             self.Update_AuC(auc_id, sqn=sqn+100)
             return
