@@ -1026,6 +1026,18 @@ class Database:
                         result[keys] = str(result[keys])
         return result
 
+    def Sanitize_Defaults(self, result):
+        """ Sanitize Subscriber results which should have sane default, but can be NULL in the db """
+        missing_defaults = {
+            "nam": 0, # PACKET_AND_CIRCUIT
+        }
+
+        for key in missing_defaults:
+            if key in result and result[key] is None:
+                result[key] = missing_defaults[key]
+
+        return result
+
     def Sanitize_Keys(self, result):
         names_to_strip = ['opc', 'ki', 'des', 'kid', 'psk', 'adm1']
         for name_to_strip in names_to_strip:
@@ -1376,8 +1388,9 @@ class Database:
 
         result = result.__dict__
         result = self.Sanitize_Datetime(result)
+        result = self.Sanitize_Defaults(result) # Sanitize other known non-null fields
         result.pop('_sa_instance_state')
-        
+
         if 'get_attributes' in kwargs:
             if kwargs['get_attributes'] == True:
                 attributes = self.Get_Subscriber_Attributes(result['subscriber_id'])
