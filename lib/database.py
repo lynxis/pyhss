@@ -1648,6 +1648,8 @@ class Database:
                 vector_dict['rand'] = binascii.hexlify(rand).decode("utf-8")
                 vector_dict['autn'] = binascii.hexlify(autn).decode("utf-8")
                 vector_dict['xres'] = binascii.hexlify(xres).decode("utf-8")
+                algo = key_data['algo'] if key_data['algo'] is not None else '0'
+                vect = S6a_crypt.generate_2g3g_vector(key_data['ki'], key_data['opc'], key_data['amf'], int(key_data['sqn']), int(algo))
                 vector_dict['ck'] = binascii.hexlify(ck).decode("utf-8")
                 vector_dict['ik'] = binascii.hexlify(ik).decode("utf-8")
 
@@ -1659,7 +1661,8 @@ class Database:
         elif action == "2g3g":
             # Mask first bit of AMF
             key_data['amf'] = '0' + key_data['amf'][1:]
-            vect = S6a_crypt.generate_2g3g_vector(key_data['ki'], key_data['opc'], key_data['amf'], int(key_data['sqn']), int(key_data['algo']))
+            algo = key_data['algo'] if key_data['algo'] is not None else '0'
+            vect = S6a_crypt.generate_2g3g_vector(key_data['ki'], key_data['opc'], key_data['amf'], int(key_data['sqn']), int(algo))
             vector_list = []
             self.logTool.log(service='Database', level='debug', message="Generating " + str(kwargs['requested_vectors']) + " vectors for GSM use", redisClient=self.redisMessaging)
             while kwargs['requested_vectors'] != 0:
