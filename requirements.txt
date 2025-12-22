@@ -25,3 +25,5 @@ tzlocal==4.3
 influxdb==5.3.1
 xmltodict==0.14.2
 StrEnum==0.4.15; python_version < '3.11'
+bitstring==4.3.1
+asn1tools
