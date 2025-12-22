@@ -28,7 +28,7 @@ from database import Database
 from gsup.controller.abstract_controller import GsupController
 from gsup.controller.abstract_transaction import AbstractTransaction
 from gsup.controller.ulr import ULRTransaction
-from gsup.protocol.ipa_peer import IPAPeer
+from gsup.protocol.ipa_peer import IPAPeer, IPAPeerRole
 from logtool import LogTool
 
 
@@ -105,10 +105,10 @@ class ISRController(GsupController):
                 await isd_transaction.begin_invoke()
 
 
-    def __find_ipa_peer_by_id(self, peer_id: Optional[str]) -> Optional[IPAPeer]:
+    def __find_ipa_peer_by_id(self, peer_id: Optional[str], role: IPAPeerRole) -> Optional[IPAPeer]:
         if peer_id is None:
             return None
         for peer in self.__all_peers.values():
-            if peer.primary_id == peer_id:
+            if peer.primary_id == peer_id and peer.role == role:
                 return peer
         return None
