@@ -93,12 +93,12 @@ class ISRController(GsupController):
         raise ValueError(f"No transaction found for peer {peer.name} during message {message.msg_type}")
 
     async def handle_subscriber_update(self, subscriber_info: SubscriberInfo):
-        for location, domain in [
-            (subscriber_info.location_info_2g.msc, 'cs'),
-            (subscriber_info.location_info_2g.vlr, 'cs'),
-            (subscriber_info.location_info_2g.sgsn, 'ps'),
+        for location, domain, role in [
+            (subscriber_info.location_info_2g.msc, 'cs', IPAPeerRole.MSC),
+            (subscriber_info.location_info_2g.vlr, 'cs', IPAPeerRole.MSC),
+            (subscriber_info.location_info_2g.sgsn, 'ps', IPAPeerRole.SGSN),
         ]:
-            peer = self.__find_ipa_peer_by_id(location)
+            peer = self.__find_ipa_peer_by_id(location, role)
             if peer is not None and peer.name not in self.__isd_transactions:
                 isd_transaction = ISDTransaction(subscriber_info, peer, domain, self._send_gsup_response)
                 self.__isd_transactions[peer.name] = isd_transaction
