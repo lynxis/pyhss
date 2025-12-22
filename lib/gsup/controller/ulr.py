@@ -161,9 +161,11 @@ class ULRController(GsupController):
                 elif rat_type[0] == 'eutran':
                     rat_types_to_check = [RAT.EUTRAN]
                 else:
-                    await self._logger.logAsync(service="GSUP", level="WARN", message=f"Unknown RAT type received in ULR: {rat_type[0]}. Checking both 2G and 3G RAT restrictions")
+                    await self._logger.logAsync(service="GSUP", level="WARN", message=f"Unknown RAT type received in ULR: {rat_type[0]}. Checking only 2G RAT restrictions")
+                    rat_types_to_check = [RAT.GERAN]
             else:
-                await self._logger.logAsync(service="GSUP", level="WARN", message="No RAT type received in ULR, checking both 2G and 3G RAT restrictions")
+                await self._logger.logAsync(service="GSUP", level="WARN", message="No RAT type received in ULR, checking only 2G")
+                rat_types_to_check = [RAT.GERAN]
 
             try:
                 subscriber_info = self._database.Get_Gsup_SubscriberInfo(imsi)
