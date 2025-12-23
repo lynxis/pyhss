@@ -145,7 +145,7 @@ class SSController(GsupController):
                 if target in targets:
                     answer = targets[target](subscriber)
                 else:
-                    answer = 'Your dialed USSD is invalid. We\'re very sorry.'
+                    answer = 'The USSD you entered is invalid. We\'re very sorry.'
 
                 component = self.encode_component(invoke_id, answer)
                 response = self.gsup_from_ussd(message, component)
