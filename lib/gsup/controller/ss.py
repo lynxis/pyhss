@@ -76,7 +76,10 @@ class SSController(GsupController):
         return response.with_ie('session_state', 'end').with_ie('supplementary_service_info', ussd_encoded).build()
 
     def get_msisdn(self, subscriber) -> str:
-        return str(subscriber['msisdn'])
+        return f"Your extension is {subscriber['msisdn']}"
+
+    def get_imsi(self, subscriber) -> str:
+        return f"Your IMSI is {subscriber['imsi']}"
 
     @staticmethod
     def encode_ussd_arg(answer: str) -> bytes:
@@ -131,9 +134,19 @@ class SSController(GsupController):
 
                 invoke_id = data['invokeID']
                 ussd = USSD.decode('USSD-Arg', data['invokeparameter'])
+                target = GSM().decode(ussd['ussd-String'])
+                await self._logger.logAsync(service='GSUP', level='INFO', message=f"Received USSD request {target}")
 
                 # TODO: check called USSD code
-                answer = self.get_msisdn(subscriber)
+                targets = {
+                    '*#100#': self.get_msisdn,
+                    '*#101#': self.get_imsi,
+                }
+                if target in targets:
+                    answer = targets[target](subscriber)
+                else:
+                    answer = 'Your dialed USSD is invalid. We\'re very sorry.'
+
                 component = self.encode_component(invoke_id, answer)
                 response = self.gsup_from_ussd(message, component)
                 await self._send_gsup_response(peer, response)
