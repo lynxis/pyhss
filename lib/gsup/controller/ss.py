@@ -134,7 +134,7 @@ class SSController(GsupController):
 
                 invoke_id = data['invokeID']
                 ussd = USSD.decode('USSD-Arg', data['invokeparameter'])
-                target = GSM().decode(ussd['ussd-String'])
+                target = GSM().decode(str(binascii.b2a_hex(ussd['ussd-String']), 'utf-8'))
                 await self._logger.logAsync(service='GSUP', level='INFO', message=f"Received USSD request {target}")
 
                 # TODO: check called USSD code
