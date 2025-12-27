@@ -48,6 +48,7 @@ class ISDTransaction(AbstractTransaction):
 
         self._validate_cn_domain(cn_domain)
         self.__cn_domain = cn_domain
+        self.__is_error = False
 
     async def begin_invoke(self):
         if self.__state != self.__TransactionState.BEGIN_STATE_INITIAL:
@@ -61,13 +62,17 @@ class ISDTransaction(AbstractTransaction):
         if self.__state != self.__TransactionState.ISD_REQUEST_SENT:
             raise ValueError("ISD Transaction not in ISD_REQUEST_SENT state")
 
-        if message.msg_type != MsgType.INSERT_DATA_RESULT:
+        if message.msg_type == MsgType.INSERT_DATA_ERROR:
+            self.__is_error = True
+        elif message.msg_type != MsgType.INSERT_DATA_RESULT:
             raise ValueError(f"ISD transaction was not successful. Got: {message.msg_type}")
 
         self.__state = self.__TransactionState.END_STATE_ISR_RECEIVED
 
     def is_finished(self):
         if self._is_timed_out():
+            return True
+        elif self.__is_error:
             return True
 
         return self.__state == self.__TransactionState.END_STATE_ISR_RECEIVED
