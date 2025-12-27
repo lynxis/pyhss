@@ -92,7 +92,7 @@ class ISRController(GsupController):
             raise ValueError(f"Missing IMSI in GSUP message from {peer}. Cannot continue ISR handling.")
         if (peer.name, imsi) in self.__ulr_transactions:
             return self.__ulr_transactions[(peer.name, imsi)]
-        if peer.name in self.__isd_transactions:
+        if (peer.name, imsi) in self.__isd_transactions:
             return self.__isd_transactions[(peer.name, imsi)]
         raise ValueError(f"No transaction found for peer {peer.name} + IMSI {imsi} during message {message.msg_type}")
 
